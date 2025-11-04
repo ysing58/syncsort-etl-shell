@@ -36,28 +36,37 @@ handle_error() {
 log_message "Starting ETL process..."
 
 # Step 1: Data Extraction
-log_message "Step 1: Extracting data..."
-if [ -f "${DATA_DIR}/source_data.txt" ]; then
-    log_message "Source data file found: ${DATA_DIR}/source_data.txt"
+log_message "Step 1: Extracting source data..."
+# Example: Extract data from source (placeholder)
+if [ -f "${DATA_DIR}/source_data.csv" ]; then
+    log_message "Source data found: ${DATA_DIR}/source_data.csv"
 else
-    handle_error "Source data file not found: ${DATA_DIR}/source_data.txt"
+    log_message "Warning: Source data not found. Creating placeholder."
+    echo "id,name,value" > ${DATA_DIR}/source_data.csv
+    echo "1,Sample,100" >> ${DATA_DIR}/source_data.csv
 fi
 
 # Step 2: Data Transformation using Syncsort DMX
-log_message "Step 2: Transforming data using Syncsort DMX..."
+log_message "Step 2: Transforming data with Syncsort DMX..."
 
-# Example Syncsort DMX command
-# Modify according to your actual DMX job requirements
-DMX_JOB="${DMX_HOME}/jobs/sample_transform.dmx"
+# Define the Syncsort DMX job file path
+DMX_JOB="./.sync/sample_transform.sync"
 
 if [ -f "${DMX_JOB}" ]; then
-    log_message "Executing DMX job: ${DMX_JOB}"
-    dmxexec -f ${DMX_JOB} >> ${RUN_LOG} 2>> ${ERROR_LOG}
+    log_message "Executing Syncsort DMX job: ${DMX_JOB}"
+    
+    # Execute DMX job using dmxcli with parameters
+    # Syntax: dmxcli -f <job_file> -p <parameters> -l <log_level>
+    dmxcli -f "${DMX_JOB}" \
+           -p "INPUT_DIR=${DATA_DIR}/input" \
+           -p "OUTPUT_DIR=${DATA_DIR}/output" \
+           -l INFO \
+           >> ${RUN_LOG} 2>> ${ERROR_LOG}
     
     if [ $? -eq 0 ]; then
         log_message "DMX transformation completed successfully"
     else
-        handle_error "DMX transformation failed. Check ${ERROR_LOG} for details"
+        handle_error "DMX transformation failed. Check error log: ${ERROR_LOG}"
     fi
 else
     log_message "DMX job file not found. Skipping transformation step."
@@ -72,6 +81,7 @@ mkdir -p ${TARGET_DIR}
 
 if [ -f "${DATA_DIR}/transformed_data.txt" ]; then
     cp ${DATA_DIR}/transformed_data.txt ${TARGET_DIR}/
+    
     if [ $? -eq 0 ]; then
         log_message "Data loaded successfully to ${TARGET_DIR}"
     else
